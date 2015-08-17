@@ -4,11 +4,15 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace PassiveScanning
 {
     public class ZgrabResults
     {
+        public static StreamWriter ServicesWriter;
+        public static Mutex ServiceWriterMutex = new Mutex();
+
         public ZgrabResults(ushort port, string name, string file, HostList hosts, IPAddress[] dutchHosts)
         {
             StreamReader reader = new StreamReader("data/" + file);
@@ -27,15 +31,21 @@ namespace PassiveScanning
                     if (!dutchHosts.Contains(host))
                         continue;
 
-                    using (StreamWriter writer = new StreamWriter("output/" + host.ToString(), true))
+                    ServiceWriterMutex.WaitOne();
+
+                    try
                     {
-                        writer.Write(host.ToString());
-                        writer.Write(";");
-                        writer.Write(name.Replace(';', ','));
-                        writer.Write(";");
-                        writer.Write(port.ToString());
-                        writer.Write(";");
-                        writer.Write(jsonString.Replace(';', ','));
+                        ServicesWriter.Write(host.ToString());
+                        ServicesWriter.Write(";");
+                        ServicesWriter.Write(name.Replace(';', ','));
+                        ServicesWriter.Write(";");
+                        ServicesWriter.Write(port.ToString());
+                        ServicesWriter.Write(";");
+                        ServicesWriter.Write(jsonString.Replace(';', ','));
+                    }
+                    finally
+                    {
+                        ServiceWriterMutex.ReleaseMutex();
                     }
                 }
                 catch

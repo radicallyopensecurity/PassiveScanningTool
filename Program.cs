@@ -20,6 +20,8 @@ namespace PassiveScanning
                 Directory.Delete("output", true);
             Directory.CreateDirectory("output");
 
+            ZgrabResults.ServicesWriter = new StreamWriter(new StreamWriter("output/services", true));
+
             ThreadPool.SetMaxThreads(2, 1);
             ThreadPool.SetMinThreads(1, 1);
 
@@ -47,12 +49,8 @@ namespace PassiveScanning
             foreach (var service in services)
                 service.WaitHandle.WaitOne();
 
-            Console.WriteLine("Serializing Hosts...");
-
-            IFormatter formatter = new BinaryFormatter();
-            Stream stream = new FileStream("Hosts.bin", FileMode.Create, FileAccess.Write, FileShare.None);
-            formatter.Serialize(stream, HostList.Hosts);
-            stream.Close();
+            Console.WriteLine("Flushing buffers and closing writer...");
+            ZgrabResults.ServicesWriter.Close();
 
             Console.WriteLine("Done.");
         }
