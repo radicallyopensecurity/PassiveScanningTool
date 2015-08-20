@@ -20,7 +20,7 @@ namespace PassiveScanning
                 Directory.Delete("data/output", true);
             Directory.CreateDirectory("data/output");
 
-            ZgrabResults.ServicesWriter = new StreamWriter(new StreamWriter("data/output/services", true));
+            ZgrabResults.ServicesWriter = new StreamWriter("data/output/services", true);
 
             ThreadPool.SetMaxThreads(2, 1);
             ThreadPool.SetMinThreads(1, 1);
