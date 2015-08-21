@@ -5,6 +5,8 @@ Welcome to the passive survey tool source code!
 
 From this repository you can build the passive survey tool for Windows, Linux and other platforms compatible with mono. Modify it in any way you can imagine, and share your changes with others!
 
+The passive survey tool uses zmap and zgrab results found at the **[scans.io](https://scans.io/)** repository. These results are then compared to a list of hosts. The format is shown in this  **[example](http://www.nirsoft.net/countryip/nl.csv)**. All services found will be written to the output file in addition to all information that is available about this service.
+
 Branches
 --------
 
@@ -33,7 +35,12 @@ The steps below will take you through cloning your own private fork, then compil
 
 ### Mac
 
-1. TODO
+1. [Set up Git](https://help.github.com/articles/set-up-git/) and [fork our repository](https://help.github.com/articles/fork-a-repo/).
+   If you'd prefer not to use Git, use the 'Download ZIP' button on the right to get the source as a zip file.
+
+1. In order to be able to compile, [set up Mono](http://www.mono-project.com/download/).
+
+1. Open your source folder and run **make**.
 
 ### Linux
 
@@ -44,11 +51,9 @@ The steps below will take you through cloning your own private fork, then compil
 
 1. Open your source folder and run **make**.
 
-### Additional target platforms
-
-TODO
-
 Usage
 -----
 
-TODO
+In order to run the program it will need pairs of zmap and zgrab inputs found at the **[scans.io](https://scans.io/)** repository. One of these pairs can for example be **Full IPv4 HTTPS Handshakes**,  [zgrab-results](https://scans.io/zsearch/kxm2gtaf574t4aw1-443-https-tls-full_ipv4-20150817T000100-zgrab-results.json.lz4) and [zmap-results](https://scans.io/zsearch/kxm2gtaf574t4aw1-443-https-tls-full_ipv4-20150817T000100-zmap-results.csv.lz4). Additionally the program will require a list of IP ranges that you are interested in as shown in this **[example](http://www.nirsoft.net/countryip/nl.csv)**. TODO add full example.
+
+You are now ready to run the program, once the program is done running it will output a CSV format file (ip;service;json-data) in addition to the analysis.
