@@ -31,10 +31,7 @@ namespace PassiveScanning
                     IPAddress incrementedToIp = toIp.Increment();
 
                     for (IPAddress ipIterator = fromIp; !ipIterator.Equals(incrementedToIp); ipIterator = ipIterator.Increment())
-                    {
                         Hosts.Add(ipIterator, new Host(ipIterator));
-                        File.Create("output/" + ipIterator.ToString()).Close();
-                    }
                 }
                 catch
                 {
