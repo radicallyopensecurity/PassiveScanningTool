@@ -42,6 +42,7 @@ namespace PassiveScanning
                         ServicesWriter.Write(port.ToString());
                         ServicesWriter.Write(";");
                         ServicesWriter.Write(jsonString.Replace(';', ','));
+                        ServicesWriter.WriteLine();
                     }
                     finally
                     {
