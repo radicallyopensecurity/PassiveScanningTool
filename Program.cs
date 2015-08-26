@@ -75,6 +75,7 @@ namespace PassiveScanning
             }
             finally
             {
+                Console.WriteLine("{0} is done.", findServiceDescriptor.Name);
                 findServiceDescriptor.WaitHandle.Set();
             }
         }
