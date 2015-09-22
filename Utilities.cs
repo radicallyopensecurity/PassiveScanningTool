@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.IO;
 
 namespace PassiveScanning
 {
@@ -39,6 +40,28 @@ namespace PassiveScanning
                 output = (byte)(input + 1);
                 carry = 0;
             }
+        }
+
+        public static int CountLines(string path)
+        {
+            int lines = 0;
+            char[] buffer = new char[4096];
+
+            using (StreamReader reader = new StreamReader(path))
+            {
+                while (!reader.EndOfStream)
+                {
+                    reader.ReadBlock(buffer, 0, buffer.Length);
+
+                    for (int i = 0; i < buffer.Length; i++)
+                    {
+                        if (buffer[i] == '\n')
+                            lines++;
+                    }
+                }
+            }
+
+            return lines;
         }
     }
 }

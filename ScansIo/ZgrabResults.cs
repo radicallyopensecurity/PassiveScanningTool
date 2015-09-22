@@ -24,7 +24,7 @@ namespace PassiveScanning
                     string jsonString = reader.ReadLine();
 
                     int hostStringStart = jsonString.IndexOf("\"ip\":") + 6;
-                    int hostStringEnd = jsonString.IndexOf('"', hostStringStart + 1) - 1;
+                    int hostStringEnd = jsonString.IndexOf('"', hostStringStart + 1);
                     string hostString = jsonString.Substring(hostStringStart, hostStringEnd - hostStringStart);
 
                     IPAddress host = IPAddress.Parse(hostString);

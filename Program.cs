@@ -7,6 +7,7 @@ using System.Threading;
 using System.Runtime.Serialization;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Collections.Generic;
 
 namespace PassiveScanning
 {
@@ -16,7 +17,44 @@ namespace PassiveScanning
 
         public static void Main(string[] args)
         {
-            if (Directory.Exists("data/output"))
+            ResultProcessor results = new ResultProcessor("/media/koen/2.3.2-22-amd641/services");
+            IPAddress[] randomHosts = results.GetRandomHosts(384);
+
+            Console.WriteLine("{0} random hosts fetched.", randomHosts.Length);
+
+            List<Host> hostList = new List<Host>(randomHosts.Length);
+            for (int i = 0; i < randomHosts.Length; i++)
+                hostList.Add(new Host(randomHosts[i]));
+
+            results.FillHostInformation(hostList);
+
+            Console.WriteLine("Filled host information.");
+
+            Dictionary<string, int> bannerCounter = new Dictionary<string, int>();
+            foreach (var host in hostList)
+            {
+                foreach (var service in host.Services)
+                {
+                    try
+                    {
+                        string banner = service.Data["data"]["banner"].Value<string>();
+                        if (bannerCounter.ContainsKey(banner))
+                            bannerCounter[banner]++;
+                        else
+                            bannerCounter.Add(banner, 1);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
+            foreach (var bannerFrequencyPair in bannerCounter)
+            {
+                Console.WriteLine("{0};{1}", bannerFrequencyPair.Key, bannerFrequencyPair.Value);
+            }
+
+            /*if (Directory.Exists("data/output"))
                 Directory.Delete("data/output", true);
             Directory.CreateDirectory("data/output");
 
@@ -52,7 +90,7 @@ namespace PassiveScanning
             Console.WriteLine("Flushing buffers and closing writer...");
             ZgrabResults.ServicesWriter.Close();
 
-            Console.WriteLine("Done.");
+            Console.WriteLine("Done.");*/
         }
 
         public static void FindServices(object state)

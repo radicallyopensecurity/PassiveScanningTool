@@ -13,11 +13,18 @@ namespace PassiveScanning
             private set;
         }
 
+        public string AddressString
+        {
+            get;
+            private set;
+        }
+
         public List<Service> Services = new List<Service>();
 
         public Host(IPAddress address)
         {
             Address = address;
+            AddressString = Address.ToString();
         }
     }
 }

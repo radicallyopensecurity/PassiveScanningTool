@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 
 namespace PassiveScanning
 {
@@ -17,17 +18,17 @@ namespace PassiveScanning
             private set;
         }
 
-        public string Banner
+        public JObject Data
         {
             get;
             private set;
         }
 
-        public Service(ushort port, string name, string banner)
+        public Service(ushort port, string name, JObject data)
         {
             Port = port;
             Name = name;
-            Banner = banner;
+            Data = data;
         }
     }
 }

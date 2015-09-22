@@ -47,9 +47,11 @@
     <Compile Include="ScansIo\ZgrabResults.cs" />
     <Compile Include="HostList.cs" />
     <Compile Include="FindServiceDescriptor.cs" />
+    <Compile Include="Results\ResultProcessor.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Folder Include="ScansIo\" />
+    <Folder Include="Results\" />
   </ItemGroup>
 </Project>
