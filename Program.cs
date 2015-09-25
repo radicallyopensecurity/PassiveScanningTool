@@ -17,7 +17,7 @@ namespace PassiveScanning
 
         public static void Main(string[] args)
         {
-            ResultProcessor results = new ResultProcessor("/media/koen/2.3.2-22-amd641/services");
+            /*ResultProcessor results = new ResultProcessor("/media/koen/2.3.2-22-amd641/services");
             IPAddress[] randomHosts = results.GetRandomHosts(384);
 
             Console.WriteLine("{0} random hosts fetched.", randomHosts.Length);
@@ -52,13 +52,11 @@ namespace PassiveScanning
             foreach (var bannerFrequencyPair in bannerCounter)
             {
                 Console.WriteLine("{0};{1}", bannerFrequencyPair.Key, bannerFrequencyPair.Value);
-            }
+            }*/
 
-            /*if (Directory.Exists("data/output"))
+            if (Directory.Exists("data/output"))
                 Directory.Delete("data/output", true);
             Directory.CreateDirectory("data/output");
-
-            ZgrabResults.ServicesWriter = new StreamWriter("data/output/services", true);
 
             ThreadPool.SetMaxThreads(2, 1);
             ThreadPool.SetMinThreads(1, 1);
@@ -78,6 +76,7 @@ namespace PassiveScanning
                 new FindServiceDescriptor(993, "IMAPS", "pt15h1gy6uic493j-993-imaps-tls-full_ipv4-20150721T120000-zgrab-results.json", "pt15h1gy6uic493j-993-imaps-tls-full_ipv4-20150721T120000-zmap-results.csv"),
                 new FindServiceDescriptor(443, "HTTPS", "ydns0pmlsiu0996u-443-https-tls-full_ipv4-20150804T010006-zgrab-results.json", "ydns0pmlsiu0996u-443-https-tls-full_ipv4-20150804T010006-zmap-results.csv"),
                 new FindServiceDescriptor(110, "POP3", "z2nk2bbxgipkjl9k-110-pop3-starttls-full_ipv4-20150729T221221-zgrab-results.json", "z2nk2bbxgipkjl9k-110-pop3-starttls-full_ipv4-20150729T221221-zmap-results.csv")
+                new FindServiceDescriptor("HTTP", "20150721-http")
             };
 
             foreach (var service in services)
@@ -87,10 +86,7 @@ namespace PassiveScanning
             foreach (var service in services)
                 service.WaitHandle.WaitOne();
 
-            Console.WriteLine("Flushing buffers and closing writer...");
-            ZgrabResults.ServicesWriter.Close();
-
-            Console.WriteLine("Done.");*/
+            Console.WriteLine("Done.");
         }
 
         public static void FindServices(object state)
@@ -99,13 +95,22 @@ namespace PassiveScanning
 
             try
             {
-                Console.WriteLine("Loading ZMAP {0}-Banner results...", findServiceDescriptor.Name);
+                if (String.IsNullOrEmpty(findServiceDescriptor.Rapid7Path))
+                {
+                    Console.WriteLine("Loading ZMAP {0}-Banner results...", findServiceDescriptor.Name);
 
-                ZmapResults mapResults = new ZmapResults(findServiceDescriptor.ZmapResultsPath, HostList);
-                Console.WriteLine("Found Dutch {0} hosts with {1}.", mapResults.Addresses.Length, findServiceDescriptor.Name);
+                    ZmapResults mapResults = new ZmapResults(findServiceDescriptor.ZmapResultsPath, HostList);
+                    Console.WriteLine("Found Dutch {0} hosts with {1}.", mapResults.Addresses.Length, findServiceDescriptor.Name);
 
-                Console.WriteLine("Fetching banners for Dutch {0} hosts...", findServiceDescriptor.Name);
-                ZgrabResults grabResults = new ZgrabResults(findServiceDescriptor.Port, findServiceDescriptor.Name, findServiceDescriptor.ZgrabResultsPath, HostList, mapResults.Addresses);
+                    Console.WriteLine("Fetching banners for Dutch {0} hosts...", findServiceDescriptor.Name);
+                    ZgrabResults grabResults = new ZgrabResults(findServiceDescriptor.Port, findServiceDescriptor.Name, findServiceDescriptor.ZgrabResultsPath, HostList, mapResults.Addresses);
+                }
+                else
+                {
+                    Console.WriteLine("Loading {0}-Rapid7 results...", findServiceDescriptor.Name);
+
+                    Rapid7Results results = new Rapid7Results(findServiceDescriptor.Name, findServiceDescriptor.Rapid7Path, HostList);
+                }
             }
             catch (Exception e)
             {

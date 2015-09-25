@@ -48,6 +48,7 @@
     <Compile Include="HostList.cs" />
     <Compile Include="FindServiceDescriptor.cs" />
     <Compile Include="Results\ResultProcessor.cs" />
+    <Compile Include="ScansIo\Rapid7Results.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
