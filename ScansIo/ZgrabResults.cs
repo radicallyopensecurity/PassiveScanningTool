@@ -10,7 +10,7 @@ namespace PassiveScanning
 {
     public class ZgrabResults
     {
-        public ZgrabResults(ushort port, string name, string file, HostList hosts, IPAddress[] dutchHosts)
+        public ZgrabResults(ushort port, string name, string file, IPAddress[] dutchHosts)
         {
             using (StreamWriter writer = new StreamWriter("data/output/services-" + name, true))
             using (StreamReader reader = new StreamReader("data/" + file))

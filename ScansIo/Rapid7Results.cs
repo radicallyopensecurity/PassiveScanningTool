@@ -8,7 +8,7 @@ namespace PassiveScanning
 {
     public class Rapid7Results
     {
-        public Rapid7Results(string name, string file, HostList hosts, IPAddress[] dutchHosts)
+        public Rapid7Results(string name, string file, HostList hosts)
         {
             using (StreamWriter writer = new StreamWriter("data/output/services-" + name, true))
             using (StreamReader reader = new StreamReader("data/" + file))
@@ -24,8 +24,11 @@ namespace PassiveScanning
                         string hostString = jsonString.Substring(hostStringStart, hostStringEnd - hostStringStart);
 
                         IPAddress host = IPAddress.Parse(hostString);
-                        if (!dutchHosts.Contains(host))
-                            continue;
+                        lock (hosts.Hosts)
+                        {
+                            if (!hosts.Hosts.Keys.Contains(host))
+                                continue;
+                        }
 
                         int portStringStart = jsonString.LastIndexOf("\"ip\":") + 7;
                         int portStringEnd = jsonString.IndexOf('"', portStringStart);
