@@ -30,8 +30,8 @@ namespace PassiveScanning
                                 continue;
                         }
 
-                        int portStringStart = jsonString.LastIndexOf("\"ip\":") + 7;
-                        int portStringEnd = jsonString.IndexOf('"', portStringStart);
+                        int portStringStart = jsonString.LastIndexOf("\"port\":") + 8;
+                        int portStringEnd = jsonString.IndexOf(',', portStringStart);
                         string portString = jsonString.Substring(portStringStart, portStringEnd - portStringStart);
 
                         writer.Write(host.ToString());
