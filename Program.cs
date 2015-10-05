@@ -8,6 +8,8 @@ using System.Runtime.Serialization;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
+using System.Web;
+using System.Text;
 
 namespace PassiveScanning
 {
@@ -17,8 +19,14 @@ namespace PassiveScanning
 
         public static void Main(string[] args)
         {
-            /*ResultProcessor results = new ResultProcessor("/media/koen/2.3.2-22-amd641/services");
-            IPAddress[] randomHosts = results.GetRandomHosts(384);
+            ResultProcessor results = new ResultProcessor("/media/koen/2.3.2-22-amd641/output");
+            List<string> uniqueHttpAddressList = results.GetUniqueAddressList(true);
+            Console.WriteLine("Found {0} unique HTTP servers.", uniqueHttpAddressList.Count);
+
+            int randomHostCount = Utilities.CalculateSampleSize(uniqueHttpAddressList.Count);
+
+            Console.WriteLine("Fetching {0} random hosts.", randomHostCount);
+            IPAddress[] randomHosts = results.GetRandomHosts(randomHostCount, uniqueHttpAddressList);
 
             Console.WriteLine("{0} random hosts fetched.", randomHosts.Length);
 
@@ -30,18 +38,48 @@ namespace PassiveScanning
 
             Console.WriteLine("Filled host information.");
 
-            Dictionary<string, int> bannerCounter = new Dictionary<string, int>();
+            Dictionary<string, Dictionary<string, int>> bannerCounters = new Dictionary<string, Dictionary<string, int>>();
             foreach (var host in hostList)
             {
                 foreach (var service in host.Services)
                 {
+                    Dictionary<string, int> bannerCounter;
+                    if (bannerCounters.ContainsKey(service.Name))
+                        bannerCounter = bannerCounters[service.Name];
+                    else
+                    {
+                        bannerCounter = new Dictionary<string, int>();
+                        bannerCounters.Add(service.Name, bannerCounter);
+                    }
+
                     try
                     {
-                        string banner = service.Data["data"]["banner"].Value<string>();
-                        if (bannerCounter.ContainsKey(banner))
-                            bannerCounter[banner]++;
+                        if (service.Name == "HTTP")
+                        {
+                            string banner = Encoding.ASCII.GetString(Convert.FromBase64String(service.RawData));
+                            int index = banner.IndexOf("server:", StringComparison.OrdinalIgnoreCase);
+                            if (index < 0)
+                                banner = "Unknown";
+                            else
+                            {
+                                index += "server:".Length;
+                                int endIndex = banner.IndexOf("\n", index);
+                                banner = banner.Substring(index, endIndex).Trim();
+                            }
+
+                            if (bannerCounter.ContainsKey(banner))
+                                bannerCounter[banner]++;
+                            else
+                                bannerCounter.Add(banner, 1);                            
+                        }
                         else
-                            bannerCounter.Add(banner, 1);
+                        {
+                            string banner = service.Data["data"]["banner"].Value<string>();
+                            if (bannerCounter.ContainsKey(banner))
+                                bannerCounter[banner]++;
+                            else
+                                bannerCounter.Add(banner, 1);
+                        }
                     }
                     catch
                     {
@@ -49,12 +87,22 @@ namespace PassiveScanning
                 }
             }
 
-            foreach (var bannerFrequencyPair in bannerCounter)
+            foreach (var pair in bannerCounters)
             {
-                Console.WriteLine("{0};{1}", bannerFrequencyPair.Key, bannerFrequencyPair.Value);
-            }*/
+                var bannerCounter = pair.Value;
 
-            if (Directory.Exists("data/output"))
+                using (StreamWriter writer = new StreamWriter("banner-" + pair.Key, false))
+                {
+                    foreach (var bannerFrequencyPair in bannerCounter)
+                    {
+                        string text = String.Format("{0};{1}", bannerFrequencyPair.Key, bannerFrequencyPair.Value);
+                        Console.WriteLine(text);
+                        writer.WriteLine(text);
+                    }
+                }
+            }
+
+            /*if (Directory.Exists("data/output"))
                 Directory.Delete("data/output", true);
             Directory.CreateDirectory("data/output");
 
@@ -72,7 +120,7 @@ namespace PassiveScanning
                 new FindServiceDescriptor(21, "FTP", "7ngdfqqrhmqdce38-21-ftp-banner-full_ipv4-20150801T233003-zgrab-results.json", "7ngdfqqrhmqdce38-21-ftp-banner-full_ipv4-20150801T233003-zmap-results.csv"),
                 new FindServiceDescriptor(995, "POP3S", "gf1z452301hyhs3w-995-pop3s-tls-full_ipv4-20150802T140000-zgrab-results.json", "gf1z452301hyhs3w-995-pop3s-tls-full_ipv4-20150802T140000-zmap-results.csv"),
                 new FindServiceDescriptor(443, "Heartbleed", "ju8g62b9picx0i3i-443-https-heartbleed-full_ipv4-20150706T000000-zgrab-results.json", "ju8g62b9picx0i3i-443-https-heartbleed-full_ipv4-20150706T000000-zmap-results.csv"),
-                new FindServiceDescriptor(25, "SMTP", "klnqp1y00vooeonh-25-smtp-starttls-full_ipv4-20150803T040000-zgrab-results.json","klnqp1y00vooeonh-25-smtp-starttls-full_ipv4-20150803T040000-zmap-results.csv"),
+                new FindServiceDescriptor(25, "SMTP", "klnqp1y00vooeonh-25-smtp-starttls-full_ipv4-20150803T040000-zgrab-results.json", "klnqp1y00vooeonh-25-smtp-starttls-full_ipv4-20150803T040000-zmap-results.csv"),
                 new FindServiceDescriptor(993, "IMAPS", "pt15h1gy6uic493j-993-imaps-tls-full_ipv4-20150721T120000-zgrab-results.json", "pt15h1gy6uic493j-993-imaps-tls-full_ipv4-20150721T120000-zmap-results.csv"),
                 new FindServiceDescriptor(443, "HTTPS", "ydns0pmlsiu0996u-443-https-tls-full_ipv4-20150804T010006-zgrab-results.json", "ydns0pmlsiu0996u-443-https-tls-full_ipv4-20150804T010006-zmap-results.csv"),
                 new FindServiceDescriptor(110, "POP3", "z2nk2bbxgipkjl9k-110-pop3-starttls-full_ipv4-20150729T221221-zgrab-results.json", "z2nk2bbxgipkjl9k-110-pop3-starttls-full_ipv4-20150729T221221-zmap-results.csv"),
@@ -86,7 +134,7 @@ namespace PassiveScanning
             foreach (var service in services)
                 service.WaitHandle.WaitOne();
 
-            Console.WriteLine("Done.");
+            Console.WriteLine("Done.");*/
         }
 
         public static void FindServices(object state)

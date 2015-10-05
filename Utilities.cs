@@ -63,6 +63,11 @@ namespace PassiveScanning
 
             return lines;
         }
+
+        public static int CalculateSampleSize(int N, double z = 1.96, double p = 0.5, double e = 0.05)
+        {
+            return (int)Math.Round(z * z * p * (1 - p) + (N - 1) * e * e);
+        }
     }
 }
 

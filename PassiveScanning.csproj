@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProductVersion>10.0.0</ProductVersion>
+    <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{450867C0-10C6-4823-9D3D-8A082FB0D918}</ProjectGuid>
     <OutputType>Exe</OutputType>
@@ -36,6 +36,12 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="HtmlAgilityPack">
+      <HintPath>HtmlAgilityPack.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -49,10 +55,14 @@
     <Compile Include="FindServiceDescriptor.cs" />
     <Compile Include="Results\ResultProcessor.cs" />
     <Compile Include="ScansIo\Rapid7Results.cs" />
+    <Compile Include="Cve\CveDetail.cs" />
+    <Compile Include="Cve\CveDocument.cs" />
+    <Compile Include="Cve\CveId.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Folder Include="ScansIo\" />
     <Folder Include="Results\" />
+    <Folder Include="Cve\" />
   </ItemGroup>
 </Project>

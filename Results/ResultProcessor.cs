@@ -16,29 +16,57 @@ namespace PassiveScanning
             m_resultPath = resultPath;
         }
 
-        public IPAddress[] GetRandomHosts(int count)
+        public int CountServices(bool onlyHttp)
         {
-            int lines = Utilities.CountLines(m_resultPath);
+            string[] files;
+            if (!onlyHttp)
+                files = Directory.GetFiles(m_resultPath);
+            else
+                files = new string[] { Path.Combine(m_resultPath, "services-HTTP") };
 
-            List<string> addresses = new List<string>(lines);
+            int lines = 0;
+            foreach (string file in files)
+                lines += Utilities.CountLines(file);
 
-            using (StreamReader reader = new StreamReader(m_resultPath))
+            return lines;
+        }
+
+        public List<string> GetUniqueAddressList(bool onlyHttp)
+        {
+            string[] files;
+            if (!onlyHttp)
+                files = Directory.GetFiles(m_resultPath);
+            else
+                files = new string[] { Path.Combine(m_resultPath, "services-HTTP") };
+
+            List<string> addressList = new List<string>(CountServices(onlyHttp));
+
+            foreach (string file in files)
             {
-                while (!reader.EndOfStream)
+                using (StreamReader reader = new StreamReader(file))
                 {
-                    string line = reader.ReadLine();
-                    if (String.IsNullOrEmpty(line))
-                        continue;
+                    while (!reader.EndOfStream)
+                    {
+                        string line = reader.ReadLine();
+                        if (String.IsNullOrEmpty(line))
+                            continue;
 
-                    int hostStringStart = line.IndexOf("\"ip\":") + 6;
-                    int hostStringEnd = line.IndexOf('"', hostStringStart + 1);
-                    string hostString = line.Substring(hostStringStart, hostStringEnd - hostStringStart);
+                        int hostStringStart = line.IndexOf("\"ip\":") + 7;
+                        int hostStringEnd = line.IndexOf('"', hostStringStart + 1);
+                        string hostString = line.Substring(hostStringStart, hostStringEnd - hostStringStart);
 
-                    if (!addresses.Contains(hostString))
-                        addresses.Add(hostString);
+                        //not needed, address list is properly distributed
+                        //if (!addressList.Contains(hostString))
+                        addressList.Add(hostString);
+                    }
                 }
             }
 
+            return addressList;
+        }
+
+        public IPAddress[] GetRandomHosts(int count, List<string> addresses)
+        {
             List<IPAddress> randomHosts = new List<IPAddress>(count);
             List<int> lastIndices = new List<int>(count);
             Random random = new Random(Environment.TickCount);
@@ -58,34 +86,60 @@ namespace PassiveScanning
             return randomHosts.ToArray();
         }
 
+        public IPAddress[] GetRandomHosts(int count, bool onlyHttp)
+        {
+            string[] files;
+            if (!onlyHttp)
+                files = Directory.GetFiles(m_resultPath);
+            else
+                files = new string[] { Path.Combine(m_resultPath, "services-HTTP") };
+
+            List<string> addresses = GetUniqueAddressList(onlyHttp);
+            return GetRandomHosts(count, addresses);
+        }
+
         public int FillHostInformation(List<Host> hosts)
         {
-            List<String> hostStrings = (from h in hosts select h.AddressString).ToList();
+            List<String> hostStrings = (from h in hosts
+                                                 select h.AddressString).ToList();
 
             int serviceCounter = 0;
-            using (StreamReader reader = new StreamReader(m_resultPath))
+            foreach (string file in Directory.GetFiles(m_resultPath))
             {
-                while (!reader.EndOfStream)
+                using (StreamReader reader = new StreamReader(file))
                 {
-                    string line = reader.ReadLine();
-                    if (String.IsNullOrEmpty(line))
-                        continue;
-
-                    int hostStringStart = line.IndexOf("\"ip\":") + 6;
-                    int hostStringEnd = line.IndexOf('"', hostStringStart + 1);
-                    string hostString = line.Substring(hostStringStart, hostStringEnd - hostStringStart);
-
-                    if (hostStrings.Contains(hostString))
+                    while (!reader.EndOfStream)
                     {
-                        Host host = hosts.Single(h => h.AddressString == hostString);
+                        string line = reader.ReadLine();
+                        if (String.IsNullOrEmpty(line))
+                            continue;
 
-                        string[] tokens = line.Split(new char[] { ';' }, 4);
-                        string service = tokens[1];
-                        int port = Int32.Parse(tokens[2]);
-                        JObject data = Newtonsoft.Json.Linq.JObject.Parse(tokens[3]);
-                        Service serv = new Service((ushort)port, service, data);
-                        host.Services.Add(serv);
-                        serviceCounter++;
+                        int hostStringStart = line.IndexOf("\"ip\":") + 6;
+                        int hostStringEnd = line.IndexOf('"', hostStringStart + 1);
+                        string hostString = line.Substring(hostStringStart, hostStringEnd - hostStringStart);
+
+                        if (hostStrings.Contains(hostString))
+                        {
+                            Host host = hosts.Single(h => h.AddressString == hostString);
+
+                            string[] tokens = line.Split(new char[] { ';' }, 4);
+                            string service = tokens[1];
+                            int port = Int32.Parse(tokens[2]);
+                            JObject data = null;
+
+                            try
+                            {
+                                data = Newtonsoft.Json.Linq.JObject.Parse(tokens[3]);
+                            }
+                            catch
+                            {
+                                
+                            }
+
+                            Service serv = new Service((ushort)port, service, tokens[3], data);
+                            host.Services.Add(serv);
+                            serviceCounter++;
+                        }
                     }
                 }
             }
