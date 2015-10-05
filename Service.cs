@@ -18,23 +18,17 @@ namespace PassiveScanning
             private set;
         }
 
-        public JObject Data
-        {
-            get;
-            private set;
-        }
-
         public string RawData
         {
             get;
             private set;
         }
 
-        public Service(ushort port, string name, string rawData, JObject data)
+        public Service(ushort port, string name, string rawData)
         {
             Port = port;
             Name = name;
-            Data = data;
+            RawData = rawData;
         }
     }
 }

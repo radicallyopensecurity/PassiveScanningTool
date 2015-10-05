@@ -5,6 +5,7 @@ using System.IO;
 using System.Xml.Linq;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text.RegularExpressions;
 
 namespace PassiveScanning.Cve
 {
@@ -150,6 +151,28 @@ namespace PassiveScanning.Cve
             }
 
             return details;
+        }
+
+        public List<CveDetail> GetAffectedCves(string version)
+        {
+            Regex versionRegex = new Regex("((?:(?:[^\\d]+ )*))(\\d(?:\\.\\d)+[a-z]*\\d*)");
+
+            Match match = versionRegex.Match(version);
+            if (!match.Success)
+                throw new Exception("Failed to find match.");
+
+            string serviceName = match.Groups[1].Value;
+            string versionId = match.Groups[2].Value;
+
+            List<CveDetail> cveDetails = GetCveDetails(serviceName);
+            List<CveDetail> affectedCveDetails = new List<CveDetail>();
+            foreach (CveDetail cveDetail in cveDetails)
+            {
+                if (cveDetail.IsVersionAffected(versionId))
+                    affectedCveDetails.Add(cveDetail);
+            }
+
+            return affectedCveDetails;
         }
 
         /* LEGACY CODE FOR cvedetails.com

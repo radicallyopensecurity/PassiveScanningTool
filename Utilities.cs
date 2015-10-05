@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace PassiveScanning
 {
@@ -67,6 +68,24 @@ namespace PassiveScanning
         public static int CalculateSampleSize(int N, double z = 1.96, double p = 0.5, double e = 0.05)
         {
             return (int)Math.Round(z * z * p * (1 - p) + (N - 1) * e * e);
+        }
+
+        public static object LoadObject(string path)
+        {
+            using (FileStream input = File.OpenRead(path))
+            {
+                BinaryFormatter formatter = new BinaryFormatter();
+                return formatter.Deserialize(input);
+            }
+        }
+
+        public static void SaveObject(string path, object o)
+        {
+            using (FileStream output = File.OpenWrite(path))
+            {
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(output, o);
+            }
         }
     }
 }

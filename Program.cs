@@ -20,7 +20,20 @@ namespace PassiveScanning
         public static void Main(string[] args)
         {
             ResultProcessor results = new ResultProcessor("/media/koen/2.3.2-22-amd641/output");
-            List<string> uniqueHttpAddressList = results.GetUniqueAddressList(true);
+
+            List<string> uniqueHttpAddressList;
+            if (!File.Exists("UniqueAddressList"))
+            {
+                Console.WriteLine("Generating unique address list...");
+                uniqueHttpAddressList = results.GetUniqueAddressList(true);
+                Utilities.SaveObject("UniqueAddressList", uniqueHttpAddressList);
+            }
+            else
+            {
+                Console.WriteLine("Loading unique address list...");
+                uniqueHttpAddressList = (List<string>)Utilities.LoadObject("UniqueAddressList");
+            }
+
             Console.WriteLine("Found {0} unique HTTP servers.", uniqueHttpAddressList.Count);
 
             int randomHostCount = Utilities.CalculateSampleSize(uniqueHttpAddressList.Count);
@@ -30,13 +43,28 @@ namespace PassiveScanning
 
             Console.WriteLine("{0} random hosts fetched.", randomHosts.Length);
 
-            List<Host> hostList = new List<Host>(randomHosts.Length);
-            for (int i = 0; i < randomHosts.Length; i++)
-                hostList.Add(new Host(randomHosts[i]));
+            List<Host> hostList;
+            if (!File.Exists("HostInformation"))
+            {
+                hostList = new List<Host>(randomHosts.Length);
 
-            results.FillHostInformation(hostList);
+                Console.WriteLine("Generating host information...");
 
-            Console.WriteLine("Filled host information.");
+                for (int i = 0; i < randomHosts.Length; i++)
+                    hostList.Add(new Host(randomHosts[i]));
+
+                results.FillHostInformation(hostList);
+
+                Console.WriteLine("Generated host information.");
+
+                Utilities.SaveObject("HostInformation", hostList);
+            }
+            else
+            {
+                Console.WriteLine("Loading host information...");
+                hostList = (List<Host>)Utilities.LoadObject("HostInformation");
+            }
+
 
             Dictionary<string, Dictionary<string, int>> bannerCounters = new Dictionary<string, Dictionary<string, int>>();
             foreach (var host in hostList)
@@ -56,7 +84,9 @@ namespace PassiveScanning
                     {
                         if (service.Name == "HTTP")
                         {
-                            string banner = Encoding.ASCII.GetString(Convert.FromBase64String(service.RawData));
+                            JObject data = JObject.Parse(service.RawData);
+
+                            string banner = Encoding.ASCII.GetString(Convert.FromBase64String(data["data"].Value<string>()));
                             int index = banner.IndexOf("server:", StringComparison.OrdinalIgnoreCase);
                             if (index < 0)
                                 banner = "Unknown";
@@ -64,7 +94,7 @@ namespace PassiveScanning
                             {
                                 index += "server:".Length;
                                 int endIndex = banner.IndexOf("\n", index);
-                                banner = banner.Substring(index, endIndex).Trim();
+                                banner = banner.Substring(index, endIndex - index).Trim();
                             }
 
                             if (bannerCounter.ContainsKey(banner))
@@ -72,9 +102,25 @@ namespace PassiveScanning
                             else
                                 bannerCounter.Add(banner, 1);                            
                         }
+                        if (service.Name == "IMAP")
+                        {
+                            JObject data = JObject.Parse(service.RawData);
+
+                            var logNode = data["log"];
+                            var typeDataNode = logNode[1];
+                            var dataNode = typeDataNode["data"];
+                            var bannerNode = dataNode["banner"];
+                            string banner = bannerNode.Value<string>();
+                            if (bannerCounter.ContainsKey(banner))
+                                bannerCounter[banner]++;
+                            else
+                                bannerCounter.Add(banner, 1);
+                        }
                         else
                         {
-                            string banner = service.Data["data"]["banner"].Value<string>();
+                            JObject data = JObject.Parse(service.RawData);
+
+                            string banner = data["data"]["banner"].Value<string>();
                             if (bannerCounter.ContainsKey(banner))
                                 bannerCounter[banner]++;
                             else
@@ -101,6 +147,10 @@ namespace PassiveScanning
                     }
                 }
             }
+
+            //TODO: Algoritme, CVE's bepalen en linken
+            //foreach (var cve in document.GetAffectedCves("Proftpd 1.3.5"))
+            //    Console.WriteLine("Exploit with score {0} fits: {1}", cve.Score, cve.Description);
 
             /*if (Directory.Exists("data/output"))
                 Directory.Delete("data/output", true);

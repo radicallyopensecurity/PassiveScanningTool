@@ -114,9 +114,8 @@ namespace PassiveScanning
                         if (String.IsNullOrEmpty(line))
                             continue;
 
-                        int hostStringStart = line.IndexOf("\"ip\":") + 6;
-                        int hostStringEnd = line.IndexOf('"', hostStringStart + 1);
-                        string hostString = line.Substring(hostStringStart, hostStringEnd - hostStringStart);
+                        int hostStringEnd = line.IndexOf(';');
+                        string hostString = line.Substring(0, hostStringEnd);
 
                         if (hostStrings.Contains(hostString))
                         {
@@ -125,18 +124,8 @@ namespace PassiveScanning
                             string[] tokens = line.Split(new char[] { ';' }, 4);
                             string service = tokens[1];
                             int port = Int32.Parse(tokens[2]);
-                            JObject data = null;
 
-                            try
-                            {
-                                data = Newtonsoft.Json.Linq.JObject.Parse(tokens[3]);
-                            }
-                            catch
-                            {
-                                
-                            }
-
-                            Service serv = new Service((ushort)port, service, tokens[3], data);
+                            Service serv = new Service((ushort)port, service, tokens[3]);
                             host.Services.Add(serv);
                             serviceCounter++;
                         }
