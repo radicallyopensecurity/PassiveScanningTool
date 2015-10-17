@@ -34,6 +34,7 @@ namespace PassiveScanning.Cve
             
         }
 
+        /* LEGACY
         public CveDetail(string serviceName, HtmlNodeCollection cveNodes, string description)
         {
             ServiceName = serviceName;
@@ -54,8 +55,9 @@ namespace PassiveScanning.Cve
             Description = description;
 
             AffectedVersions = GetAffectedVersions().ToArray();
-        }
+        }*/
 
+        /* LEGACY
         private List<string> GetAffectedVersions()
         {
             int index = Description.IndexOf(ServiceName, 0, StringComparison.OrdinalIgnoreCase);
@@ -98,7 +100,7 @@ namespace PassiveScanning.Cve
             }
 
             return versions;
-        }
+        } */
 
         public bool IsVersionAffected(string version)
         {
@@ -107,7 +109,7 @@ namespace PassiveScanning.Cve
             string subversion1 = match1.Groups[2].Value;
             string releaseCandidate1 = match1.Groups[3].Value;
 
-            foreach (string affectedVersion in GetAffectedVersions())
+            foreach (string affectedVersion in AffectedVersions)
             {
                 if (version.StartsWith("<"))
                 {
@@ -137,7 +139,8 @@ namespace PassiveScanning.Cve
                         }
                     }
                 }
-                else if (version.ToLower() == affectedVersion.ToLower())
+                //else if (version.ToLower() == affectedVersion.ToLower())
+                else if (affectedVersion.IndexOf(version, StringComparison.OrdinalIgnoreCase) >= 0)
                     return true;
             }
 
@@ -183,6 +186,34 @@ namespace PassiveScanning.Cve
         public override string ToString()
         {
             return ServiceName + " " + CVE + " " + Description.ToString().PadLeft(4, '0');
+        }
+
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is CveDetail))
+                return false;
+
+            CveDetail b = (CveDetail)obj;
+            if (b.CVE == CVE)
+                return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return CVE.GetHashCode();
+        }
+
+        public static bool operator==(CveDetail a, CveDetail b)
+        {
+            return a.Equals(b);
+        } 
+
+        public static bool operator!=(CveDetail a, CveDetail b)
+        {
+            return !a.Equals(b);
         }
     }
 }

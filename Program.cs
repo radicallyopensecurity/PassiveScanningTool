@@ -1,15 +1,12 @@
 using System;
-using System.Linq;
-using PassiveScanning.ScansIo;
-using System.Net;
-using Newtonsoft.Json.Linq;
-using System.Threading;
-using System.Runtime.Serialization;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
-using System.Web;
+using System.IO;
+using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
+using PassiveScanning.Cve;
+using PassiveScanning.ScansIo;
 
 namespace PassiveScanning
 {
@@ -19,7 +16,14 @@ namespace PassiveScanning
 
         public static void Main(string[] args)
         {
-            ResultProcessor results = new ResultProcessor("/media/koen/2.3.2-22-amd641/output");
+            if (!Directory.Exists("output"))
+                Directory.CreateDirectory("output");
+
+            Console.WriteLine("Loading CVE database.");
+            CveDocument document = new CveDocument();
+
+            string resultPath = "/media/koen/2.3.2-22-amd64/output";
+            ResultProcessor results = new ResultProcessor(resultPath);
 
             List<string> uniqueHttpAddressList;
             if (!File.Exists("UniqueAddressList"))
@@ -137,7 +141,7 @@ namespace PassiveScanning
             {
                 var bannerCounter = pair.Value;
 
-                using (StreamWriter writer = new StreamWriter("banner-" + pair.Key, false))
+                using (StreamWriter writer = new StreamWriter("output/banner-" + pair.Key, false))
                 {
                     foreach (var bannerFrequencyPair in bannerCounter)
                     {
@@ -147,6 +151,152 @@ namespace PassiveScanning
                     }
                 }
             }
+
+            Dictionary<string, Dictionary<string, int>> softwareCounter = new Dictionary<string, Dictionary<string, int>>();
+            Dictionary<string, int> totalSoftwareCounter = new Dictionary<string, int>();
+            Dictionary<string, Dictionary<CveDetail, int>> cveDetailsCounter = new Dictionary<string, Dictionary<CveDetail, int>>(); 
+
+            foreach (var pair in bannerCounters)
+            {
+                if (pair.Key == "HTTP")
+                {
+                    int total = 0;
+                    Dictionary<string, int> counter = new Dictionary<string, int>();
+                    Dictionary<CveDetail, int> cveCounter = new Dictionary<CveDetail, int>();
+
+                    Regex regex = new Regex(@"(?:[a-zA-Z/\-_\.]+[ /])+v?\d+(?:\.\d+)*[a-z]?(?:-[^ ;]+)?");
+                    foreach (var bannerFrequencyPair in pair.Value)
+                    {
+                        total += bannerFrequencyPair.Value;
+
+                        Match match = regex.Match(bannerFrequencyPair.Key);
+                        if (!match.Success)
+                            continue;
+
+                        string software = match.Captures[0].Value;
+                        if (counter.ContainsKey(software))
+                            counter[software] += bannerFrequencyPair.Value;
+                        else
+                            counter.Add(software, bannerFrequencyPair.Value);
+
+                        Console.WriteLine(software + ";" + bannerFrequencyPair.Value);
+
+                        List<CveDetail> cveDetails = document.GetAffectedCves(software);
+                        foreach (var cveDetail in cveDetails)
+                        {
+                            if (cveCounter.ContainsKey(cveDetail))
+                                cveCounter[cveDetail] += bannerFrequencyPair.Value;
+                            else
+                                cveCounter.Add(cveDetail, bannerFrequencyPair.Value);
+                        }
+                    }
+
+                    cveDetailsCounter.Add(pair.Key, cveCounter);
+                    softwareCounter.Add(pair.Key, counter);
+                    totalSoftwareCounter.Add(pair.Key, total);
+                }
+                else
+                {
+                    int total = 0;
+                    Dictionary<string, int> counter = new Dictionary<string, int>();
+                    Dictionary<CveDetail, int> cveCounter = new Dictionary<CveDetail, int>();
+
+                    Regex regex = new Regex(@"(?!\d)(?:[a-zA-Z\.\d]+[ \-_])+v?(?:\d+(?:\.\d+)+(?:rc\d+|[a-z])?)");
+                    foreach (var bannerFrequencyPair in pair.Value)
+                    {
+                        total += bannerFrequencyPair.Value;
+
+                        Match match = regex.Match(bannerFrequencyPair.Key);
+                        if (!match.Success)
+                            continue;
+
+                        string software = match.Captures[0].Value;
+                        if (counter.ContainsKey(software))
+                            counter[software] += bannerFrequencyPair.Value;
+                        else
+                            counter.Add(software, bannerFrequencyPair.Value);
+
+                        List<CveDetail> cveDetails = document.GetAffectedCves(software);
+                        foreach (var cveDetail in cveDetails)
+                        {
+                            if (cveCounter.ContainsKey(cveDetail))
+                                cveCounter[cveDetail] += bannerFrequencyPair.Value;
+                            else
+                                cveCounter.Add(cveDetail, bannerFrequencyPair.Value);
+                        }
+                    }
+
+                    cveDetailsCounter.Add(pair.Key, cveCounter);
+                    softwareCounter.Add(pair.Key, counter);
+                    totalSoftwareCounter.Add(pair.Key, total);
+                }
+            }
+
+            foreach (var pair in softwareCounter)
+            {
+                using (StreamWriter writer = new StreamWriter("output/software-frequency-" + pair.Key, false))
+                {
+                    writer.WriteLine("Total {0}: {1}", pair.Key, totalSoftwareCounter[pair.Key]);
+                    foreach (var frequencyPair in pair.Value)
+                        writer.WriteLine(frequencyPair.Key + ';' + frequencyPair.Value);
+                }
+            }
+
+            foreach (var pair in cveDetailsCounter)
+            {
+                using (StreamWriter writer = new StreamWriter("output/cve-frequency-" + pair.Key, false))
+                {
+                    writer.WriteLine("Total {0}: {1}", pair.Key, totalSoftwareCounter[pair.Key]);
+                    foreach (var frequencyPair in pair.Value)
+                        writer.WriteLine(frequencyPair.Key.CVE + ';' + frequencyPair.Key.Score + ';' + frequencyPair.Value);
+                }
+            }
+
+            Dictionary<string, int> missingHTTPHeaderCounter = new Dictionary<string, int>();
+            //Dictionary<string, int> missingHTTPSHeaderCounter = new Dictionary<string, int>();
+
+            foreach (var host in hostList)
+            {
+                foreach (string s in host.GetMissingHTTPHeaders())
+                {
+                    if (missingHTTPHeaderCounter.ContainsKey(s))
+                        missingHTTPHeaderCounter[s]++;
+                    else
+                        missingHTTPHeaderCounter.Add(s, 1);
+                }
+
+                /*foreach (string s in host.GetMissingHTTPSHeaders())
+                {
+                    if (missingHTTPSHeaderCounter.ContainsKey(s))
+                        missingHTTPSHeaderCounter[s]++;
+                    else
+                        missingHTTPSHeaderCounter.Add(s, 1);
+                }*/
+            }
+
+            using (StreamWriter writer = new StreamWriter("output/missing-http-header-frequency", false))
+            {
+                writer.WriteLine("Total hosts: " + hostList.Count);
+
+                foreach (var pair in missingHTTPHeaderCounter)
+                    writer.WriteLine(pair.Key + ";" + pair.Value);
+            }
+
+            List<string> heartbleedHosts = GetHeartbleedHosts(resultPath, hostList);
+
+            using (StreamWriter writer = new StreamWriter("output/heartbleed-frequency", false))
+            {
+                writer.WriteLine("Total hosts: " + hostList.Count);
+                writer.WriteLine("Heartbleed: " + heartbleedHosts.Count);
+            }
+
+            /*using (StreamWriter writer = new StreamWriter("missing-https-header-frequency", false))
+            {
+                writer.WriteLine("Total hosts: " + hostList.Count);
+
+                foreach (var pair in missingHTTPSHeaderCounter)
+                    writer.WriteLine(pair.Key + ";" + pair.Value);
+            }*/
 
             //TODO: Algoritme, CVE's bepalen en linken
             //foreach (var cve in document.GetAffectedCves("Proftpd 1.3.5"))
@@ -187,10 +337,45 @@ namespace PassiveScanning
             Console.WriteLine("Done.");*/
         }
 
+        public static List<string> GetHeartbleedHosts(string resultPath, List<Host> hostList)
+        {
+            List<string> heartbleedHosts = new List<string>(hostList.Count);
+
+            using (StreamReader reader = new StreamReader(Path.Combine(resultPath, "services-Heartbleed")))
+            {
+                while (!reader.EndOfStream)
+                {
+                    string line;
+
+                    try
+                    {
+                        line = reader.ReadLine();
+                        if (!line.Contains("\"heartbleed_vulnerable\":true"))
+                            continue;
+
+                        foreach (var host in hostList)
+                        {
+                            if (line.StartsWith(host.AddressString))
+                            {
+                                heartbleedHosts.Add(host.AddressString);
+                                break;
+                            }
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            }
+
+            return heartbleedHosts;
+        }
+
         public static void FindServices(object state)
         {
             FindServiceDescriptor findServiceDescriptor = (FindServiceDescriptor)state;
-
+            
             try
             {
                 if (String.IsNullOrEmpty(findServiceDescriptor.Rapid7Path))

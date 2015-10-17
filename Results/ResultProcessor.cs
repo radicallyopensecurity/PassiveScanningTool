@@ -100,12 +100,18 @@ namespace PassiveScanning
 
         public int FillHostInformation(List<Host> hosts)
         {
-            List<String> hostStrings = (from h in hosts
-                                                 select h.AddressString).ToList();
+            List<String> hostStrings = (from h in hosts select h.AddressString).ToList();
 
             int serviceCounter = 0;
             foreach (string file in Directory.GetFiles(m_resultPath))
             {
+                string fileName = Path.GetFileName(file);
+                if (!fileName.StartsWith("services-"))
+                    continue;
+
+                if (fileName == "services-Heartbleed")
+                    continue;
+
                 using (StreamReader reader = new StreamReader(file))
                 {
                     while (!reader.EndOfStream)

@@ -155,15 +155,36 @@ namespace PassiveScanning.Cve
 
         public List<CveDetail> GetAffectedCves(string version)
         {
-            Regex versionRegex = new Regex("((?:(?:[^\\d]+ )*))(\\d(?:\\.\\d)+[a-z]*\\d*)");
+            string serviceName;
+            string versionId;
 
-            Match match = versionRegex.Match(version);
-            if (!match.Success)
-                throw new Exception("Failed to find match.");
+            
+            try
+            {
+                Regex versionRegex = new Regex(@"((?:(?:[^\d]+[ /])*))(\d+(?:\.\d+)+[a-z]*\d*)");
 
-            string serviceName = match.Groups[1].Value;
-            string versionId = match.Groups[2].Value;
+                Match match = versionRegex.Match(version);
+                if (!match.Success)
+                    throw new Exception("Failed to find match for string '" + version + "'.");
 
+                serviceName = match.Groups[1].Value;
+                versionId = match.Groups[2].Value;
+            }
+            catch
+            {
+                Regex versionRegex = new Regex(@"(\w+)/(\d)");
+
+                Match match = versionRegex.Match(version);
+                if (!match.Success)
+                {
+                    Console.WriteLine("Failed to find match for string '" + version + "'.");
+                    return new List<CveDetail>();
+                }
+
+                serviceName = match.Groups[1].Value;
+                versionId = match.Groups[2].Value;
+            }
+            
             List<CveDetail> cveDetails = GetCveDetails(serviceName);
             List<CveDetail> affectedCveDetails = new List<CveDetail>();
             foreach (CveDetail cveDetail in cveDetails)
@@ -171,7 +192,7 @@ namespace PassiveScanning.Cve
                 if (cveDetail.IsVersionAffected(versionId))
                     affectedCveDetails.Add(cveDetail);
             }
-
+            
             return affectedCveDetails;
         }
 
