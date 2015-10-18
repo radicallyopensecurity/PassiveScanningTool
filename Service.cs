@@ -24,6 +24,10 @@ namespace PassiveScanning
             private set;
         }
 
+        public string Product = null;
+        public string Version = null;
+        public string Banner = null;
+
         public Service(ushort port, string name, string rawData)
         {
             Port = port;

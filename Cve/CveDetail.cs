@@ -139,8 +139,8 @@ namespace PassiveScanning.Cve
                         }
                     }
                 }
-                //else if (version.ToLower() == affectedVersion.ToLower())
-                else if (affectedVersion.IndexOf(version, StringComparison.OrdinalIgnoreCase) >= 0)
+                else if (version.ToLower() == affectedVersion.ToLower())
+                //else if (affectedVersion.IndexOf(version, StringComparison.OrdinalIgnoreCase) >= 0)
                     return true;
             }
 

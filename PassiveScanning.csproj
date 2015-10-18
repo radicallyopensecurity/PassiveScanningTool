@@ -58,6 +58,7 @@
     <Compile Include="Cve\CveDetail.cs" />
     <Compile Include="Cve\CveDocument.cs" />
     <Compile Include="Cve\CveId.cs" />
+    <Compile Include="Shodan\ShodanWeb.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
