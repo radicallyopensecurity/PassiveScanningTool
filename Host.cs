@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
+using System.Net.NetworkInformation;
 
 namespace PassiveScanning
 {
@@ -24,6 +25,8 @@ namespace PassiveScanning
             private set;
         }
 
+        public List<string> HostNames = new List<string>();
+
         public List<Service> Services = new List<Service>();
 
         public Host(IPAddress address)
@@ -32,19 +35,36 @@ namespace PassiveScanning
             AddressString = Address.ToString();
         }
 
-        public string GetHostname()
+        /*public void FillHostnames()
         {
-            using (WebClient client = new WebClient())
-            {
-                client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
-                string responseString = client.UploadString("https://www.whatismyip.com/custom/response.php", "hostname" + AddressString + "=&action=hostname-lookup");
-                int start = responseString.IndexOf('>') + 1;
-                int end = responseString.IndexOf('<', start);
+            HostNames = new List<string>();
 
-                string hostName = responseString.Substring(start, end - start);
-                return hostName;
+            /*using (WebClient client = new WebClient())
+            {
+                string source = client.DownloadString("http://www.samdns.com/lookup/reverse/" + AddressString + "/");
+
+                Regex regex = new Regex("points to: <strong>([^<]+)</strong>");
+                foreach (Match match in regex.Matches(source))
+                    HostNames.Add(match.Groups[1].Value);
+            }*/
+/*
+
+            try
+            {
+                IPHostEntry hostInfo = Dns.GetHostEntry(Address);
+                if (hostInfo.HostName != AddressString)
+                    HostNames.Add(hostInfo.HostName);
+
+                if (hostInfo.Aliases.Length > 0)
+                {
+                    Console.WriteLine("Blabla");
+                }
             }
-        }
+            catch
+            {
+
+            }
+        }*/
 
         public bool HasHeartbleed(string resultPath)
         {

@@ -106,6 +106,12 @@ namespace PassiveScanning
                 hostList = (List<Host>)Utilities.LoadObject("HostInformation");
             }
 
+            List<string> hostIPs = new List<string>();
+            foreach (var host in hostList)
+                hostIPs.Add(host.AddressString);
+
+            File.WriteAllLines("hosts.txt", hostIPs);
+
             Console.WriteLine("Searching for software banners/versions and CVE's...");
             FindAndDumpSoftwareBannersAndCves(hostList);
             Console.WriteLine("Searching for Heartbleed...");
@@ -117,9 +123,9 @@ namespace PassiveScanning
             {
                 Console.WriteLine("Loading Shodan host list...");
                 shodanHostList = GetHostListFromShodan(hostList.Select(h => h.AddressString).ToList());
-                Console.WriteLine("Found {0} Shodan hosts.", shodanHostList);
+                Console.WriteLine("Found {0} Shodan hosts.", shodanHostList.Count);
 
-                Utilities.SaveObject("ShodanHostInformation", hostList);
+                Utilities.SaveObject("ShodanHostInformation", shodanHostList);
             }
             else
             {
@@ -129,6 +135,105 @@ namespace PassiveScanning
 
             Console.WriteLine("Searching for Shodan software banners/versions and CVE's...");
             FindAndDumpSoftwareBannersAndCves(shodanHostList, "shodan-");
+
+            Console.WriteLine("Searching Shodan for comments on websites...");
+            FindAndProcessWebsiteComments(shodanHostList);
+        }
+
+        public static void FindAndProcessWebsiteComments(List<Host> hostList)
+        {
+            Console.WriteLine("Total hosts: {0}.", hostList.Count);
+
+            int counter = 0;
+            foreach (var host in hostList)
+            {
+                Console.WriteLine("Processing host {0}.", ++counter);
+
+                //host.FillHostnames();
+                var hostNames = host.HostNames;
+                if (hostNames == null)
+                    hostNames = new List<string>(new string[] { host.AddressString });
+                else
+                    hostNames.Add(host.AddressString);
+
+                hostNames = hostNames.Distinct().ToList();
+
+                List<string> comments = new List<string>();
+                foreach (var hostName in hostNames)
+                {
+                    Console.WriteLine("Processing hostname {0}.", hostName);
+
+                    var commentList = GetCommentsFromArchiveOrg(hostName);
+                    if (commentList == null)
+                        continue;
+
+                    comments.AddRange(commentList);
+                }
+
+                comments = comments.Distinct().ToList();
+                foreach (var comment in comments)
+                    Console.WriteLine(comment);
+            }//);
+        }
+
+        public static List<string> GetCommentsFromArchiveOrg(string hostName)
+        {
+            string source = GetSourceFromArchiveOrg(hostName);
+            if (source == null)
+                return null;
+
+            return GetCommentsFromSource(source);
+        }
+
+        public static List<string> GetCommentsFromSource(string source)
+        {
+            Regex regex = new Regex(@"<!--([\.\w\-/#_\s/:]+)-->");
+
+            List<string> comments = new List<string>();
+            MatchCollection matches = regex.Matches(source);
+            foreach (Match match in matches)
+                comments.Add(match.Groups[1].Value);
+
+            return comments;
+        }
+
+        public static string GetSourceFromArchiveOrg(string hostname)
+        {
+            using (WebClient client = new WebClient())
+            {
+                string resultString = null;
+
+                try
+                {
+                    resultString = client.DownloadString("http://archive.org/wayback/available?url=" + hostname);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failed to load archive for '{0}': {1}", hostname, e.Message);
+                    return null;
+                }
+
+                JObject result = JObject.Parse(resultString);
+                JObject closestToken = (JObject)result.SelectToken("archived_snapshots.closest");
+
+                if (closestToken == null)
+                    return null;
+
+                bool available = false;
+                JToken availableToken;
+                if (closestToken.TryGetValue("available", out availableToken))
+                    available = availableToken.Value<bool>();
+
+                string url = null;
+                JToken urlToken;
+                if (closestToken.TryGetValue("url", out urlToken))
+                    url = urlToken.Value<string>();
+
+                if (available && url != null)
+                    return client.DownloadString(url);
+            }
+
+            return null;
         }
 
         public static List<Host> GetHostListFromShodan(List<string> ips)
@@ -140,12 +245,14 @@ namespace PassiveScanning
             Console.WriteLine("Total hosts: " + ips.Count);
 
             Parallel.ForEach(ips, ip =>
+            //foreach (var ip in ips)
                 {
                     JObject hostObject = shodan.GetHost(ip);  
                     if (hostObject == null)
                     {
                         Console.WriteLine("Skipped host {0} with ip {1} due to a Shodan error.", ++hostCounter, ip);
                         return;
+                        //continue;
                     }
                             
                     JToken errorToken;
@@ -153,9 +260,18 @@ namespace PassiveScanning
                     {
                         Console.WriteLine("Skipped host {0} with ip {1}: {2}.", ++hostCounter, ip, errorToken.Value<string>());
                         return;
+                        //continue;
                     }
 
                     Host host = new Host(IPAddress.Parse(ip));
+                    host.HostNames = new List<string>();
+
+                    JToken hostNames;
+                    if (hostObject.TryGetValue("hostnames", out hostNames))
+                    {
+                        JArray hostNamesArray = (JArray)hostNames;
+                        host.HostNames.AddRange(hostNamesArray.ToObject<string[]>());
+                    }
 
                     JToken dataToken;
                     if (hostObject.TryGetValue("data", out dataToken))
