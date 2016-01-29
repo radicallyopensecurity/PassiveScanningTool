@@ -20,7 +20,7 @@ namespace PassiveScanning
 
         public static void Main(string[] args)
         {
-            /*if (Directory.Exists("data/output"))
+            if (Directory.Exists("data/output"))
                 Directory.Delete("data/output", true);
             Directory.CreateDirectory("data/output");
 
@@ -34,15 +34,15 @@ namespace PassiveScanning
 
             FindServiceDescriptor[] services = new FindServiceDescriptor[]
             { 
-                new FindServiceDescriptor(143, "IMAP", "5elhwfrqv15nq5px-143-imap-starttls-full_ipv4-20150617T163103-zgrab-results.json", "5elhwfrqv15nq5px-143-imap-starttls-full_ipv4-20150617T163103-zmap-results.csv"),
-                new FindServiceDescriptor(21, "FTP", "7ngdfqqrhmqdce38-21-ftp-banner-full_ipv4-20150801T233003-zgrab-results.json", "7ngdfqqrhmqdce38-21-ftp-banner-full_ipv4-20150801T233003-zmap-results.csv"),
-                new FindServiceDescriptor(995, "POP3S", "gf1z452301hyhs3w-995-pop3s-tls-full_ipv4-20150802T140000-zgrab-results.json", "gf1z452301hyhs3w-995-pop3s-tls-full_ipv4-20150802T140000-zmap-results.csv"),
-                new FindServiceDescriptor(443, "Heartbleed", "ju8g62b9picx0i3i-443-https-heartbleed-full_ipv4-20150706T000000-zgrab-results.json", "ju8g62b9picx0i3i-443-https-heartbleed-full_ipv4-20150706T000000-zmap-results.csv"),
-                new FindServiceDescriptor(25, "SMTP", "klnqp1y00vooeonh-25-smtp-starttls-full_ipv4-20150803T040000-zgrab-results.json", "klnqp1y00vooeonh-25-smtp-starttls-full_ipv4-20150803T040000-zmap-results.csv"),
-                new FindServiceDescriptor(993, "IMAPS", "pt15h1gy6uic493j-993-imaps-tls-full_ipv4-20150721T120000-zgrab-results.json", "pt15h1gy6uic493j-993-imaps-tls-full_ipv4-20150721T120000-zmap-results.csv"),
-                new FindServiceDescriptor(443, "HTTPS", "ydns0pmlsiu0996u-443-https-tls-full_ipv4-20150804T010006-zgrab-results.json", "ydns0pmlsiu0996u-443-https-tls-full_ipv4-20150804T010006-zmap-results.csv"),
-                new FindServiceDescriptor(110, "POP3", "z2nk2bbxgipkjl9k-110-pop3-starttls-full_ipv4-20150729T221221-zgrab-results.json", "z2nk2bbxgipkjl9k-110-pop3-starttls-full_ipv4-20150729T221221-zmap-results.csv"),
-                new FindServiceDescriptor("HTTP", "20150721-http")
+                new FindServiceDescriptor(143, "IMAP", FindZmapFile("143-imap-starttls-full_ipv4", true), FindZmapFile("143-imap-starttls-full_ipv4", false)),
+                new FindServiceDescriptor(21, "FTP", FindZmapFile("21-ftp-banner-full_ipv4", true), FindZmapFile("21-ftp-banner-full_ipv4", false)),
+                new FindServiceDescriptor(995, "POP3S", FindZmapFile("995-pop3s-tls-full_ipv4", true), FindZmapFile("995-pop3s-tls-full_ipv4", false)),
+                new FindServiceDescriptor(443, "Heartbleed", FindZmapFile("443-https-heartbleed-full_ipv4", true), FindZmapFile("443-https-heartbleed-full_ipv4", false)),
+                new FindServiceDescriptor(25, "SMTP", FindZmapFile("25-smtp-starttls-full_ipv4", true), FindZmapFile("25-smtp-starttls-full_ipv4", false)),
+                new FindServiceDescriptor(993, "IMAPS", FindZmapFile("993-imaps-tls-full_ipv4", true), FindZmapFile("993-imaps-tls-full_ipv4", false)),
+                new FindServiceDescriptor(443, "HTTPS", FindZmapFile("443-https-tls-full_ipv4", true), FindZmapFile("443-https-tls-full_ipv4", false)),
+                new FindServiceDescriptor(110, "POP3", FindZmapFile("110-pop3-starttls-full_ipv4", true), FindZmapFile("110-pop3-starttls-full_ipv4", false)),
+                new FindServiceDescriptor("HTTP", FindRapid7File("http"))
             };
 
             foreach (var service in services)
@@ -52,7 +52,7 @@ namespace PassiveScanning
             foreach (var service in services)
                 service.WaitHandle.WaitOne();
 
-            Console.WriteLine("Done.");*/
+            Console.WriteLine("Done.");
 
             CveDocument = new CveDocument();
 
@@ -679,6 +679,17 @@ namespace PassiveScanning
                 Console.WriteLine("{0} is done.", findServiceDescriptor.Name);
                 findServiceDescriptor.WaitHandle.Set();
             }
+        }
+        
+        public static string FindRapid7File(string name)
+        {
+            Regex regex = new Regex("[0-9]{8}-(\\w+)");
+            return Directory.GetFiles("data").First(f => regex.IsMatch(f) && f.ToLower().Contains(name.ToLower())).Substring(5);
+        }
+
+        public static string FindZmapFile(string name, bool zgrab)
+        {
+            return Directory.GetFiles("data").First(f => f.ToLower().Contains(name.ToLower()) && f.ToLower().Contains(zgrab ? "zgrab-results" : "zmap-results")).Substring(5);
         }
     }
 }
