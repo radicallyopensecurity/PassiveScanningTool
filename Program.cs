@@ -10,6 +10,7 @@ using PassiveScanning.Cve;
 using PassiveScanning.ScansIo;
 using PassiveScanning.Shodan;
 using System.Linq;
+using System.Threading;
 
 namespace PassiveScanning
 {
